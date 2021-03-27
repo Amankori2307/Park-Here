@@ -6,14 +6,15 @@ from parkinglot.models import User
 from customer.serializers import CustomerSerializer
 from rest_framework import status
 from customer.models import Customer
-
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
 # Create your views here.
 
 class LoginCustomer(APIView):
     def post(self, request):
         print(request.data)
         username = request.data['mobile']
-        password = request.data['password']
+        password = request.data['password']``
         try:
 
             customer = User.objects.get(mobile=username)
