@@ -12,26 +12,30 @@ from customer.models import Customer
 class LoginCustomer(APIView):
     def post(self, request):
         print(request.data)
-        username = request.data.mobile
-        password = request.data.password
+        username = request.data['mobile']
+        password = request.data['password']
         try:
 
             customer = User.objects.get(mobile=username)
+            print(customer.password)
             if customer.password == password:
                 try:
                         
                     serializerData = CustomerSerializer(data=request.data, format=None)
                     if serializerData.is_valid():
-                        return Response(data=serializerData.data, status=status.HTTP_200_OK, message="Logges in successfully")
+                        print(serializerData.data)
+                        return Response(data=serializerData.data, status=status.HTTP_200_OK,)
                     
                 except Exception as e:
                     print(e)
-                    return Response(data=serializerData.errors, status=status.HTTP_400_BAD_REQUEST, message="Something Went Wrong")
+                    return Response(data=serializerData.errors, status=status.HTTP_400_BAD_REQUEST,)
                 
             else:
-                return Response(data=None, message="Enter Valid Credentials")
+                print("Asdkjjba")
+                return Response(data=None)
         except Exception as e:
-            return Response(data=None, message="Something Went Wrong", status=status.HTTP_400_BAD_REQUEST)
+            print(e)
+            return Response(data=None,  status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerById(APIView):
     def get(self, pk):
@@ -50,9 +54,10 @@ class CustomerById(APIView):
 class InsertCustomer(APIView):
     def post(self, request, format='json'):
         req_data = request.data
+        print(req_data)
         try:
-            customer = User.objects.get(username=req_data['username'])
-            return Response(data=None,message="Account already exists")
+            customer = User.objects.get(mobile=req_data['mobile'])
+            return Response(data=None)
         except User.DoesNotExist:
             password = req_data['password']
             customer = User.objects.create(req_data)
@@ -63,13 +68,13 @@ class InsertCustomer(APIView):
             serializer.save()
             return Response(
                     data=serializer.data,
-                     message="Shopkeeper Created Successfully",
+                     
                     status=status.HTTP_200_OK
                 )
         else:
              return Response(
                     data=serializer.errors,
-                    message="Error",
+                    
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
