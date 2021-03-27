@@ -2,16 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
 from .managers import UserManager
-
-
+from customer.models import VehicleTypeChoices, Vehicle
+from django.utils import timezone
 class UserTypeChoices(models.IntegerChoices):
     PARKING_LOT = 0, "PARKING_LOT"
     CUSTOMER = 1, "CUSTOMER"
 
-class VehicleTypeChoices(models.IntegerChoices):
-    TWO_WHEELER = 0, "TWO_WHEELER"
-    THREE_WHEELER = 1, "THREE_WHEELER"
-    FOUR_WHEELER = 2, "FOUR_WHEELER"
+class PaymentMethodChoices(models.IntegerChoices):
+    COD = 0, "COD"
+
 class User(AbstractUser):
     username = None
     email = None
@@ -57,7 +56,7 @@ class ParkingLot(models.Model):
             MinValueValidator(-180),
             MaxValueValidator(180)
         ]
-    ),
+    )
     total_parking_slots = models.IntegerField(
         validators=[
             MinValueValidator(1)
@@ -65,7 +64,7 @@ class ParkingLot(models.Model):
     )
 
 class Charges(models.Model):
-    parkingLotRef = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
+    parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
     vehicle_type = models.IntegerField(
         choices=VehicleTypeChoices.choices,
         default=VehicleTypeChoices.TWO_WHEELER
@@ -73,8 +72,30 @@ class Charges(models.Model):
     charges_per_hour = models.IntegerField(
        validators=[MinValueValidator(0)]  
     )
+    class Meta:
+        unique_together = ['parking_lot_ref', 'vehicle_type']
+    
 
 
-# class Parking(models.Model):
-#     parkingLotRef = models.ForeignKey(ParkingLot, on_delete=models.PROTECT)
-#     vehicleRef = models.ForeignKey()
+class Parking(models.Model):
+    parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.PROTECT)
+    vehicle_ref = models.ForeignKey(Vehicle, on_delete=models.PROTECT)
+    entry_time = models.DateTimeField(
+        auto_now=timezone.now
+    )
+    exit_time = models.DateTimeField(
+        null=True
+    )
+    payment_status = models.BooleanField(
+        default=False
+    )
+
+class Transaction(models.Model):
+    parking_ref = models.ForeignKey(Parking, on_delete=models.PROTECT)
+    payment_method = models.IntegerField(
+        choices=PaymentMethodChoices.choices,
+        default=PaymentMethodChoices.COD
+    )
+    amount = models.IntegerField(
+        validators=[MinValueValidator(0)]
+    )
