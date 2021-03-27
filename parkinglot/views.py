@@ -5,6 +5,10 @@ from utils.utils import check_required_fields, gen_response
 from .serializers import ParkingLotSerializer, ParkingLotListSerializer
 from .models import ParkingLot
 from django.http import Http404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.authentication import authenticate
 
 # Create your views here.
 class ParkingLotListView(views.APIView):
@@ -97,3 +101,48 @@ class ParkingLotDetailView(views.APIView):
                 gen_response(True, False, "Object Not Found"),
                 status=status.HTTP_404_NOT_FOUND
             )
+
+class GetSelfDetails(views.APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    def get(self, request):
+        user = request.user
+        try: 
+            parking_lot = ParkingLot.objects.get(user=user.id)
+            serializer = ParkingLotListSerializer(parking_lot)
+            return Response(
+                gen_response(False, True, "", serializer.data),
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                gen_response(True, False, "Parking Lot Not Found"),
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+class LoginView(views.APIView):
+    def post(self, request):
+        errors = check_required_fields(request.data, ["mobile", "password"])
+        if len(errors.keys()):
+            return Response(
+                gen_response(True, False, errors),
+                status=status.HTTP_400_BAD_REQUEST
+            )   
+        mobile = request.data["mobile"]
+        password = request.data["password"]
+        user = authenticate(mobile=mobile, password=password)
+        print(user, mobile, password)
+        if user is not None:
+            token = Token.objects.get_or_create(user=user)
+            token = token[0]
+            data = {
+                "auth_token": token.key            }
+            return Response(
+                gen_response(False, True, "", data),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                gen_response(True, False, "Please Signup or Enter Valid Credentials"),
+                status=status.HTTP_400_BAD_REQUEST
+            )            

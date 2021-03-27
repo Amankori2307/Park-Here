@@ -16,6 +16,9 @@ class Customer(models.Model):
         blank=True
     )
 
+    def __str__(self):
+        return self.user.mobile
+    
 
 class Vehicle(models.Model):
     customer_ref = models.ForeignKey(Customer, on_delete=models.CASCADE)
