@@ -32,7 +32,11 @@ class ParkingLotListView(views.APIView):
         serializer = ParkingLotSerializer(data=req_data)
         if serializer.is_valid():
             serializer.save()
-            data = ParkingLotListSerializer(serializer.instance).data
+            token = Token.objects.get_or_create(user=user)
+            token = token[0]
+            data = {
+                "auth_token": token.key
+            }
             return Response(
                 gen_response(False, True, "Successfully Added Parking Lot", data),
                 status=status.HTTP_200_OK

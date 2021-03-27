@@ -7,6 +7,7 @@ from .models import Customer, Vehicle
 from utils.permissions import VehiclePermissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
 # Create your views here.
 class CustomerListView(views.APIView):
  
@@ -29,8 +30,13 @@ class CustomerListView(views.APIView):
         serializer = CustomerSerializer(data=req_data)
         if serializer.is_valid():
             serializer.save()
+            token = Token.objects.get_or_create(user=user)
+            token = token[0]
+            data = {
+                "auth_token": token.key
+            }
             return Response(
-                gen_response(False, True, "Successfully Added Customer"),
+                gen_response(False, True, "Successfully Added Customer", data),
                 status=status.HTTP_200_OK
             )
         else:
