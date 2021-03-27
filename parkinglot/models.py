@@ -62,6 +62,9 @@ class ParkingLot(models.Model):
             MinValueValidator(1)
         ]
     )
+    
+    def __str__(self):
+        return self.user.mobile
 
 class Charges(models.Model):
     parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
