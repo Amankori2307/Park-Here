@@ -2,7 +2,7 @@ from rest_framework import views, status, viewsets
 from rest_framework.response import Response
 from parkinglot.models import User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
-from .serializers import CustomerSerializer, CustomerListSerializer, VehicleSerializer
+from .serializers import CustomerSerializer, CustomerListSerializer, VehicleSerializer, VehicleListSerializer
 from .models import Customer, Vehicle
 from utils.permissions import VehiclePermissions
 from rest_framework.authentication import TokenAuthentication
@@ -121,7 +121,6 @@ class GetSelfDetails(views.APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-
 # Vehicle Views
 class VehicleListView(views.APIView):
     permission_classes = [VehiclePermissions]
@@ -143,8 +142,9 @@ class VehicleListView(views.APIView):
 
     def get(self, request):
         try:
-            queryset = Vehicle.objects.all()
-            serializer = VehicleSerializer(queryset, many=True)
+            customer_ref = request.user.id
+            queryset = Vehicle.objects.filter(customer_ref=customer_ref)
+            serializer = VehicleListSerializer(queryset, many=True)
             return Response(
                 gen_response(False, True, "List Of Vehicle ", serializer.data),
                 status=status.HTTP_200_OK
@@ -155,18 +155,20 @@ class VehicleListView(views.APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-class CustomerDetailView(views.APIView):
-    def get_object(self, pk):
+class VehicleDetailView(views.APIView):
+    # permission_classes = [VehiclePermissions]
+    # authentication_classes = [TokenAuthentication]
+    def get_object(self, pk, *args):
         try:
-            obj = Customer.objects.get(pk=pk)
+            obj = Vehicle.objects.get(pk=pk, *args)
             return obj
         except ParkingLot.DoesNotExist:
             raise Http404
     
     def get(self, requset, pk):
         try:
-            parking_lot = self.get_object(pk)
-            serializer = CustomerListSerializer(parking_lot)
+            vehicle = self.get_object(pk)
+            serializer = VehicleListSerializer(vehicle)
             return Response(
                 gen_response(False, True, "", serializer.data),
                 status=status.HTTP_200_OK
@@ -177,25 +179,3 @@ class CustomerDetailView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
     
-    def put(self, request, pk):
-        try:
-            parking_lot = self.get_object(pk)
-            serializer = CustomerSerializer(parking_lot, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                data = CustomerListSerializer(serializer.instance).data
-
-                return Response(
-                    gen_response(False, True, "Successfully Updated Customer Lot", data),
-                    status=status.HTTP_200_OK
-                )
-            else:
-                return Response(
-                    gen_response(True, False, serializer.errors)
-                )
-        except Exception as e:
-            print(e)
-            return Response(
-                gen_response(True, False, "Object Not Found"),
-                status=status.HTTP_404_NOT_FOUND
-            )

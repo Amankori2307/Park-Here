@@ -1,8 +1,9 @@
-from rest_framework import views, status
+from utils.permissions import ChargesDetailPermissions, ChargesListPermissions
+from rest_framework import serializers, views, status
 from rest_framework.response import Response
-from .models import User, UserTypeChoices
+from .models import Charges, User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
-from .serializers import ParkingLotSerializer, ParkingLotListSerializer
+from .serializers import ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer
 from .models import ParkingLot
 from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
@@ -59,7 +60,6 @@ class ParkingLotListView(views.APIView):
                 gen_response(False, True, "Something Went Wrong"),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 class ParkingLotDetailView(views.APIView):
     def get_object(self, pk):
         try:
@@ -150,3 +150,64 @@ class LoginView(views.APIView):
                 gen_response(True, False, "Please Signup or Enter Valid Credentials"),
                 status=status.HTTP_400_BAD_REQUEST
             )            
+
+class ChargesListView(views.APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [ChargesListPermissions]
+    def post(self, request):
+        req_data = request.data
+        req_data["parking_lot_ref"] = request.user.id
+        serializer = ChargesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                gen_response(False, True, "", serializer.data),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                gen_response(True, False, serializer.errors),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    def get(self, request):
+        user = request.user
+        if user.is_authenticated and user.user_type == UserTypeChoices.PARKING_LOT:
+            parking_lot_ref = request.user.id
+        else:
+            parking_lot_ref = request.query_params.get("parking_lot_ref", None)
+            if not parking_lot_ref:
+                return Response(
+                    gen_response(True, False, "'parking_lot_ref' Is Required(In Query Params) "),
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        charges_list = Charges.objects.filter(parking_lot_ref=parking_lot_ref)
+        serializer = ChargesSerializer(charges_list, many=True)
+        return Response(
+            gen_response(False, True, "List of Charges", serializer.data),
+            status=status.HTTP_200_OK
+        )
+
+class ChargesDetailView(views.APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [ChargesDetailPermissions]
+    def put(self, request, pk):
+        charges = request.charges
+        serializer = ChargesSerializer(charges, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                gen_response(False, True, "", serializer.data),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                gen_response(True, False, serializer.errors),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    def delete(self, request, pk):
+        charges= request.charges
+        charges.delete()
+        return Response(
+            gen_response(True, False, "Deleted Successfully"),
+            status=status.HTTP_200_OK
+        )
