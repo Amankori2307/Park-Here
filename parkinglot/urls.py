@@ -4,4 +4,10 @@ urlpatterns = [
     url(r'^api/parking-lot/$', views.ParkingLotListView.as_view()),
     url(r'^api/parking-lot/(?P<pk>\d+)/$', views.ParkingLotDetailView.as_view()),
     url(r'^api/parking-lot/user/$', views.GetSelfDetails.as_view()),
+
+
+    # Charges
+    url(r'^api/charges/$', views.ChargesListView.as_view()),
+    url(r'^api/charges/(?P<pk>\d+)/$', views.ChargesDetailView.as_view()),
+    # url(r'^api/parking-lot/user/$', views.GetSelfDetails.as_view()),
 ]

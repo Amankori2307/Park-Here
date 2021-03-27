@@ -18,3 +18,10 @@ class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         exclude = ()
+    
+
+class VehicleListSerializer(serializers.ModelSerializer):
+    customer_ref = CustomerListSerializer(read_only=True)
+    class Meta:
+        model = Vehicle
+        exclude = ()
