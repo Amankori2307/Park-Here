@@ -70,7 +70,6 @@ class Charges(models.Model):
     parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
     vehicle_type = models.IntegerField(
         choices=VehicleTypeChoices.choices,
-        default=VehicleTypeChoices.TWO_WHEELER
     )
     charges_per_hour = models.IntegerField(
        validators=[MinValueValidator(0)]  
@@ -78,8 +77,6 @@ class Charges(models.Model):
     class Meta:
         unique_together = ['parking_lot_ref', 'vehicle_type']
     
-
-
 class Parking(models.Model):
     parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.PROTECT)
     vehicle_ref = models.ForeignKey(Vehicle, on_delete=models.PROTECT)
