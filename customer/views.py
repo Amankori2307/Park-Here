@@ -4,7 +4,7 @@ from parkinglot.models import User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
 from .serializers import CustomerSerializer, CustomerListSerializer, VehicleSerializer, VehicleListSerializer
 from .models import Customer, Vehicle
-from utils.permissions import VehiclePermissions
+from utils.permissions import VehicleListPermissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
@@ -103,7 +103,6 @@ class CustomerDetailView(views.APIView):
                     gen_response(True, False, serializer.errors)
                 )
         except Exception as e:
-            print(e)
             return Response(
                 gen_response(True, False, "Object Not Found"),
                 status=status.HTTP_404_NOT_FOUND
@@ -129,15 +128,17 @@ class GetSelfDetails(views.APIView):
 
 # Vehicle Views
 class VehicleListView(views.APIView):
-    permission_classes = [VehiclePermissions]
+    permission_classes = [VehicleListPermissions]
     authentication_classes = [TokenAuthentication]
     def post(self, request):
-
-        serializer = VehicleSerializer(data=request.data)
+        req_data = request.data
+        req_data["customer_ref"] = request.user.id
+        serializer = VehicleSerializer(data=req_data)
         if serializer.is_valid():
             serializer.save()
+            data = VehicleListSerializer(serializer.instance).data
             return Response(
-                gen_response(False, True, "Successfully Added Vehicle"),
+                gen_response(False, True, "Successfully Added Vehicle", data),
                 status=status.HTTP_200_OK
             )
         else:

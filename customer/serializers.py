@@ -28,6 +28,13 @@ class CustomerListSerializer(serializers.ModelSerializer):
         model = Customer
         exclude = ()
 
+
+class CustomerSerializerWithOnlyUserData(serializers.ModelSerializer):
+    user = UserListSerializer(read_only=True)
+    class Meta:
+        model = Customer
+        exclude = ()
+
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
@@ -35,7 +42,7 @@ class VehicleSerializer(serializers.ModelSerializer):
     
 
 class VehicleListSerializer(serializers.ModelSerializer):
-    customer_ref = CustomerListSerializer(read_only=True)
+    customer_ref = CustomerSerializerWithOnlyUserData(read_only=True)
     class Meta:
         model = Vehicle
         exclude = ()
