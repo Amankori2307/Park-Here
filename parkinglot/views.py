@@ -1,20 +1,20 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from customer.serializers import CustomerListSerializer
 from customer.models import Customer, Vehicle
 from re import error, search
 from utils.permissions import ChargesDetailPermissions, ChargesListPermissions, IsParkingLot
 from rest_framework import request, serializers, views, status
 from rest_framework.response import Response
-from .models import Charges, Parking, User, UserTypeChoices
+from .models import Charges, Parking, PaymentMethodChoices, User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
-from .serializers import ParkingListSerializer, ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer
+from .serializers import ParkingListSerializer, ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer, TransactionSerializer
 from .models import ParkingLot
 from django.http import Http404
 from rest_framework.permissions import IsAuthenticated, OperandHolder
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import authenticate
-
+import math
 # Create your views here.
 class ParkingLotListView(views.APIView):
 
@@ -315,10 +315,46 @@ class UpdateParkingStatus(views.APIView):
                 serializer = ParkingSerializer(parking, data=data, partial=True)
                 if serializer.is_valid():
                     # Create Transaction
-                    # try:
-                    #     transaction_data = {
+                    try:
+                        # Calculate Amount
+                        # Pending
+                        try:
+                            charges = Charges.objects.get(vehicle_type=parking.vehicle_ref.vehicle_type, parking_lot_ref=parking.parking_lot_ref)
+                        except Charges.DoesNotExist:
+                            return Response(
+                                gen_response(True, False, "Charges Not Found"),
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                            ) 
+                        time_diff = datetime.now() - parking.entry_time
+                        total_seconds = time_diff.total_seconds()
+                        total_minutes = int(total_seconds/60)
+    
+                        hours = total_minutes//60
+                        minutes = total_minutes%60
 
-                    #     }
+                        print(f"{hours} hours {minutes} minutes")
+                        amount = charges.charges_per_hour * (total_seconds/(60*60))
+                        amount = round(amount)
+                        transaction_data = {
+                            "parking_ref": parking.id,
+                            "payment_method": PaymentMethodChoices.COD,
+                            "amount": amount
+                        }
+                        serializedTransaction = TransactionSerializer(data=transaction_data)
+                        if serializedTransaction.is_valid():
+                            serializedTransaction.save()
+                        else:
+                            return Response(
+                                gen_response(True, False, serializer.errors),
+                                status=status.HTTP_400_BAD_REQUEST
+                            )    
+
+                    except Exception as e:
+                        print(e)
+                        return Response(
+                            gen_response(True, False, "Something Went Wrong"),
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                        )
                     serializer.save()
                     data =  ParkingListSerializer(serializer.instance).data
                     return Response(

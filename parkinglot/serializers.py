@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import serializers
 from .models import Parking, ParkingLot, Transaction, User, Charges
 
@@ -35,6 +36,20 @@ class ParkingSerializer(serializers.ModelSerializer):
         exclude = ()
 
 class ParkingListSerializer(serializers.ModelSerializer):
+    parked_for = serializers.SerializerMethodField("calc_parked_for")
+    def calc_parked_for(self, data):
+        instance = self.instance
+        if instance and instance.exit_time:
+            time_diff = instance.exit_time - instance.entry_time
+            total_seconds = time_diff.total_seconds()
+            total_minutes = int(total_seconds/60)
+
+            hours = total_minutes//60
+            minutes = total_minutes%60
+
+            return f"{minutes} minute"
+        else:
+            return None
     transaction = serializers.SerializerMethodField("fetch_transaction")
     def fetch_transaction(self, data):
         try:
@@ -51,4 +66,4 @@ class ParkingListSerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        excude = ()
+        exclude = ()

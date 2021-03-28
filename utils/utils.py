@@ -14,3 +14,4 @@ def gen_response(error, success, message="", data={}):
         "message": message,
         "data": data
     }
+
