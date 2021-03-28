@@ -64,7 +64,7 @@ class ParkingLot(models.Model):
     )
     
     def __str__(self):
-        return self.user.mobile
+        return self.user.id
 
 class Charges(models.Model):
     parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.CASCADE)
@@ -81,7 +81,7 @@ class Parking(models.Model):
     parking_lot_ref = models.ForeignKey(ParkingLot, on_delete=models.PROTECT)
     vehicle_ref = models.ForeignKey(Vehicle, on_delete=models.PROTECT)
     entry_time = models.DateTimeField(
-        auto_now=timezone.now
+        auto_now_add=timezone.now
     )
     exit_time = models.DateTimeField(
         null=True

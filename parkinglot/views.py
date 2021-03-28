@@ -1,15 +1,16 @@
+from datetime import datetime, timezone
 from customer.serializers import CustomerListSerializer
 from customer.models import Customer, Vehicle
 from re import error, search
-from utils.permissions import ChargesDetailPermissions, ChargesListPermissions
+from utils.permissions import ChargesDetailPermissions, ChargesListPermissions, IsParkingLot
 from rest_framework import request, serializers, views, status
 from rest_framework.response import Response
 from .models import Charges, Parking, User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
-from .serializers import ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer
+from .serializers import ParkingListSerializer, ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer
 from .models import ParkingLot
 from django.http import Http404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, OperandHolder
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import authenticate
@@ -72,7 +73,6 @@ class ParkingLotDetailView(views.APIView):
     def get_object(self, pk):
         try:
             obj = ParkingLot.objects.get(pk=pk)
-            print(obj)
             return obj
         except ParkingLot.DoesNotExist:
             raise Http404
@@ -108,7 +108,6 @@ class ParkingLotDetailView(views.APIView):
                     gen_response(True, False, serializer.errors)
                 )
         except Exception as e:
-            print(e)
             return Response(
                 gen_response(True, False, "Object Not Found"),
                 status=status.HTTP_404_NOT_FOUND
@@ -143,7 +142,6 @@ class LoginView(views.APIView):
         mobile = request.data["mobile"]
         password = request.data["password"]
         user = authenticate(mobile=mobile, password=password)
-        print(user, mobile, password)
         if user is not None:
             token = Token.objects.get_or_create(user=user)
             token = token[0]
@@ -232,11 +230,11 @@ class ChargesDetailView(views.APIView):
 
 class ParkingListView(views.APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = []
+    permission_classes = [IsParkingLot]
 
     def post(self, request):
-        # try:
-            errors = check_required_fields(request.data, ["vehicle_ref", "parking_lot_ref"])
+        try:
+            errors = check_required_fields(request.data, ["vehicle_ref"])
             if len(errors.keys()):
                 return Response(
                     gen_response(True, False, errors),
@@ -244,21 +242,24 @@ class ParkingListView(views.APIView):
                 )
             # Check if there is already an active parking for given vehicle in given parking
             vehicle_ref = request.data.get("vehicle_ref", None)
-            parking_lot_ref = request.data.get("parking_lot_ref", None)
+            parking_lot_ref = request.user.id
+            
             parking = Parking.objects.filter(vehicle_ref=vehicle_ref, parking_lot_ref=parking_lot_ref, payment_status=False).order_by("-entry_time")
             if len(parking):
-                serializer = ParkingSerializer(parking, many=True)
+                # serializer = ParkingSerializer(parking, many=True)
                 return Response(
-                    gen_response(True, False, "1", serializer.data),
-                    status=status.HTTP_200_OK
+                    gen_response(True, False, "This Vehicle Is Already Parked In This Parking Lot, Please Complete Previous Transaction To Start A New One."),
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                return Response("")
             else:
-                serializer = ParkingSerializer(data=request.data)
+                req_data = request.data
+                req_data["parking_lot_ref"] = parking_lot_ref
+                serializer = ParkingSerializer(data=req_data)
                 if serializer.is_valid():
                     serializer.save()
+                    data =  ParkingListSerializer(serializer.instance).data
                     return Response(
-                        gen_response(True, False, "", serializer.data),
+                        gen_response(True, False, "", data),
                         status=status.HTTP_200_OK
                     )
                 else:
@@ -266,9 +267,79 @@ class ParkingListView(views.APIView):
                         gen_response(False, True, serializer.errors),
                         status=status.HTTP_400_BAD_REQUEST
                     )
-        # except Exception as e:
-        #     print(e)
-        #     return Response(
-        #         gen_response(False, True, "Something Went Wrong"),
-        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        #     )
+        except Exception as e:
+            print(e)
+            return Response(
+                gen_response(False, True, "Something Went Wrong"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class GetParkingStatus(views.APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsParkingLot]
+    def get(self, request, vehicle_ref):
+        try:
+            parking = Parking.objects.filter(vehicle_ref=vehicle_ref, parking_lot_ref=request.user.id, payment_status=False).order_by("-entry_time")
+            if len(parking):
+                parking = parking[0]
+                serializer = ParkingListSerializer(parking)
+                return Response(
+                    gen_response(False, True, "", serializer.data),
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    gen_response(True, False, "Pakring Entry Does Not Exist"),
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        except Exception as e:
+            return Response(
+                gen_response(True, False, "Something Went Wrong"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+class UpdateParkingStatus(views.APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsParkingLot]
+    def put(self, request, vehicle_ref):
+        try:
+            parking = Parking.objects.filter(vehicle_ref=vehicle_ref, parking_lot_ref=request.user.id, payment_status=False).order_by("-entry_time")
+            if len(parking):
+                
+                parking = parking[0]
+                data = {
+                    "payment_status": True,
+                    "exit_time": datetime.now()
+                }
+                serializer = ParkingSerializer(parking, data=data, partial=True)
+                if serializer.is_valid():
+                    # Create Transaction
+                    # try:
+                    #     transaction_data = {
+
+                    #     }
+                    serializer.save()
+                    data =  ParkingListSerializer(serializer.instance).data
+                    return Response(
+                        gen_response(False, True, "Payment done successfully", data),
+                        status=status.HTTP_200_OK
+                    )
+                else:
+                    return Response(
+                        gen_response(False, True, serializer.errors),
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            else:
+                return Response(
+                    gen_response(True, False, "Pakring Entry Does Not Exist"),
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+        except Exception as e:
+            print(e)
+            return Response(
+                gen_response(True, False, "Something Went Wrong"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
