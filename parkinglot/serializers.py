@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ParkingLot, User, Charges
+from .models import Parking, ParkingLot, User, Charges
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -23,3 +23,7 @@ class ChargesSerializer(serializers.ModelSerializer):
         model = Charges
         exclude = ()
 
+class ParkingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Parking
+        exclude = ()

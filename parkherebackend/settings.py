@@ -123,3 +123,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 AUTH_USER_MODEL = 'parkinglot.User'
+
+import django_heroku
+# Activate Django-Heroku.
+django_heroku.settings(locals())

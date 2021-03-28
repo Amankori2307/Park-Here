@@ -1,9 +1,11 @@
+from customer.models import Vehicle
+from re import error, search
 from utils.permissions import ChargesDetailPermissions, ChargesListPermissions
-from rest_framework import serializers, views, status
+from rest_framework import request, serializers, views, status
 from rest_framework.response import Response
-from .models import Charges, User, UserTypeChoices
+from .models import Charges, Parking, User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
-from .serializers import ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer
+from .serializers import ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer
 from .models import ParkingLot
 from django.http import Http404
 from rest_framework.permissions import IsAuthenticated
@@ -211,3 +213,46 @@ class ChargesDetailView(views.APIView):
             gen_response(True, False, "Deleted Successfully"),
             status=status.HTTP_200_OK
         )
+
+
+class ParkingListView(views.APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = []
+
+    def post(self, request):
+        try:
+            errors = check_required_fields(request.data, ["vehicle_ref", "parking_lot_ref"])
+            if len(errors.keys()):
+                return Response(
+                    gen_response(True, False, errors),
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Check if there is already an active parking for given vehicle in given parking
+            try: 
+                vehicle_ref = request.data.get("vehicle_ref", None)
+                parking_lot_ref = request.data.get("parking_lot_ref", None)
+                parking = Parking.objects.filter(vehicle_ref=vehicle_ref, parking_lot_ref=parking_lot_ref, payment_status=False)
+                serializer = ParkingSerializer(parking, many=True)
+                return Response(
+                    gen_response(True, False, "1", serializer.data),
+                    status=status.HTTP_200_OK
+                )
+            except Vehicle.DoesNotExist:
+                serializer = ParkingSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(
+                        gen_response(True, False, "", serializer.data),
+                        status=status.HTTP_200_OK
+                    )
+                else:
+                    return Response(
+                        gen_response(False, True, serializer.errors),
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+        except Exception as e:
+            print(e)
+            return Response(
+                gen_response(False, True, "Something Went Wrong"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
