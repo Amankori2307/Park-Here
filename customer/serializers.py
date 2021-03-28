@@ -21,7 +21,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     user = UserListSerializer(read_only=True)
     vehicles = serializers.SerializerMethodField('fetch_vehicles')
     def fetch_vehicles(self, data):
-        vehicles = Vehicle.objects.filter(customer_ref=data.use.id)
+        vehicles = Vehicle.objects.filter(customer_ref=data.user.id)
         serializer = VehicleSerializer(vehicles, many=True)
         return serializer.data
     class Meta:
