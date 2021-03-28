@@ -34,3 +34,12 @@ class ChargesDetailPermissions(BasePermission):
 
         else:
             return False
+
+
+class ParkingListPermissions(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if request.method == "POST":
+            return user.is_authenticated and (user.user_type == UserTypeChoices.PARKING_LOT)
+        else:
+            return False

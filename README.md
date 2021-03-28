@@ -1,2 +1,7 @@
-# Park-Here
-Backend For "Park Here"
+asgiref==3.3.1
+Django==3.1.7
+djangorestframework==3.12.4
+gunicorn==20.1.0
+python-decouple==3.4
+pytz==2021.1
+sqlparse==0.4.1
