@@ -1,8 +1,9 @@
 from datetime import datetime
 from rest_framework import serializers
 from .models import Parking, ParkingLot, Transaction, User, Charges
-
+from utils.utils import get_avalable_slots
 class UserListSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = User
         fields = ("id", "mobile") 
@@ -22,6 +23,10 @@ class ChargesSerializer(serializers.ModelSerializer):
 class ParkingLotListSerializer(serializers.ModelSerializer):
     user = UserListSerializer(read_only=True)
     charges = serializers.SerializerMethodField("fetch_charges")
+    available_slots = serializers.SerializerMethodField("calc_available_slots")
+    def calc_available_slots(self, data):
+            return get_avalable_slots(data.user.id, data.total_parking_slots)
+
     def fetch_charges(self, data):
         charges = Charges.objects.filter(parking_lot_ref=data.user.id)
         serializer = ChargesSerializer(charges, many=True)

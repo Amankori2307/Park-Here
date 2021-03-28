@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from customer.serializers import CustomerListSerializer
-from customer.models import Customer, Vehicle
+from customer.models import Customer, Vehicle, VehicleTypeChoices
 from re import error, search
 from utils.permissions import ChargesDetailPermissions, ChargesListPermissions, IsParkingLot
 from rest_framework import request, serializers, views, status
 from rest_framework.response import Response
 from .models import Charges, Parking, PaymentMethodChoices, User, UserTypeChoices
-from utils.utils import check_required_fields, gen_response
+from utils.utils import check_required_fields, gen_response, get_avalable_slots
 from .serializers import ParkingListSerializer, ParkingLotSerializer, ParkingLotListSerializer, ChargesSerializer, ParkingSerializer, TransactionSerializer
 from .models import ParkingLot
 from django.http import Http404
@@ -65,10 +65,12 @@ class ParkingLotListView(views.APIView):
                 status=status.HTTP_200_OK
             )
         except Exception as e:
+            print(e)
             return Response(
                 gen_response(False, True, "Something Went Wrong"),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 class ParkingLotDetailView(views.APIView):
     def get_object(self, pk):
         try:
@@ -233,7 +235,7 @@ class ParkingListView(views.APIView):
     permission_classes = [IsParkingLot]
 
     def post(self, request):
-        try:
+        # try:
             errors = check_required_fields(request.data, ["vehicle_ref"])
             if len(errors.keys()):
                 return Response(
@@ -252,6 +254,38 @@ class ParkingListView(views.APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             else:
+                # Get Vehicle
+                try:
+                    vehicle = Vehicle.objects.get(pk=vehicle_ref)
+                except ParkingLot.DoesNotExist:
+                    return Response(
+                        gen_response(True, False, "Something Went Wrong"),
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+
+                chargesList  = Charges.objects.filter(parking_lot_ref=parking_lot_ref)
+                chargesAvailableForVehicles = [ item.vehicle_type for item in chargesList]
+                if vehicle.vehicle_type not in chargesAvailableForVehicles:
+                    return Response(
+                        gen_response(True, False, f"Can't Create Entry For {VehicleTypeChoices.choices[vehicle.vehicle_type][1]}, Because Parking Charges For This Type Of Vehicle Is Not Available  In This Parking Lot(parking_lot_ref: {parking_lot_ref})")
+                    )
+                
+                try:
+                    parking_lot = ParkingLot.objects.get(pk=parking_lot_ref)
+                except ParkingLot.DoesNotExist:
+                    return Response(
+                        gen_response(True, False, "Something Went Wrong"),
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                availabel_slotes = get_avalable_slots(parking_lot_ref, parking_lot.total_parking_slots)
+                if availabel_slotes <= 0:
+                    return Response(
+                        gen_response(True, False, "0 Available Slots"),
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
                 req_data = request.data
                 req_data["parking_lot_ref"] = parking_lot_ref
                 serializer = ParkingSerializer(data=req_data)
@@ -267,12 +301,11 @@ class ParkingListView(views.APIView):
                         gen_response(False, True, serializer.errors),
                         status=status.HTTP_400_BAD_REQUEST
                     )
-        except Exception as e:
-            print(e)
-            return Response(
-                gen_response(False, True, "Something Went Wrong"),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        # except Exception as e:
+        #     return Response(
+        #         gen_response(False, True, "Something Went Wrong"),
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )
 
 class GetParkingStatus(views.APIView):
     authentication_classes = [TokenAuthentication]

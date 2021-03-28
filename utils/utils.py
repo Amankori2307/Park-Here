@@ -1,3 +1,6 @@
+from parkinglot.models import Parking
+
+
 def check_required_fields(data, required_fields):
     errors = {}
     for item in required_fields:
@@ -15,3 +18,6 @@ def gen_response(error, success, message="", data={}):
         "data": data
     }
 
+def get_avalable_slots(parking_lot_ref, total_parking_slots):
+    filled_slots = Parking.objects.filter(parking_lot_ref=parking_lot_ref, payment_status=False).count()
+    return total_parking_slots - filled_slots
