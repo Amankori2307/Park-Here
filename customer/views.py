@@ -8,6 +8,7 @@ from utils.permissions import VehiclePermissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+from django.http import Http404
 # Create your views here.
 class CustomerListView(views.APIView):
  
@@ -68,7 +69,7 @@ class CustomerDetailView(views.APIView):
         try:
             obj = Customer.objects.get(pk=pk)
             return obj
-        except ParkingLot.DoesNotExist:
+        except Customer.DoesNotExist:
             raise Http404
     
     def get(self, requset, pk):
@@ -167,7 +168,7 @@ class VehicleDetailView(views.APIView):
         try:
             obj = Vehicle.objects.get(pk=pk, *args)
             return obj
-        except ParkingLot.DoesNotExist:
+        except Vehicle.DoesNotExist:
             raise Http404
     
     def get(self, requset, pk):

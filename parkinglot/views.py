@@ -1,4 +1,5 @@
-from customer.models import Vehicle
+from customer.serializers import CustomerListSerializer
+from customer.models import Customer, Vehicle
 from re import error, search
 from utils.permissions import ChargesDetailPermissions, ChargesListPermissions
 from rest_framework import request, serializers, views, status
@@ -146,8 +147,17 @@ class LoginView(views.APIView):
         if user is not None:
             token = Token.objects.get_or_create(user=user)
             token = token[0]
+            if user.user_type == UserTypeChoices.CUSTOMER:
+                customer = Customer.objects.get(user=user.id)
+                serializer = CustomerListSerializer(customer)
+            elif user.user_type == UserTypeChoices.PARKING_LOT:
+                parking_lot = ParkingLot.objects.get(user=user.id)
+                serializer = ParkingLotListSerializer(parking_lot)
+            
             data = {
-                "auth_token": token.key            }
+                "auth_token": token.key,
+                "user": serializer.data
+            }
             return Response(
                 gen_response(False, True, "", data),
                 status=status.HTTP_200_OK
