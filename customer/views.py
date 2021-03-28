@@ -23,6 +23,11 @@ class CustomerListView(views.APIView):
         password = req_data.get("password", None)
         try:
             user = User.objects.get(mobile=mobile)
+            if user.user_type != UserTypeChoices.CUSTOMER:
+                return Response(
+                    gen_response(True, False, "User Already Exists"),
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except User.DoesNotExist:
             user = User.objects.create_user(mobile=mobile, password=password, user_type=UserTypeChoices.CUSTOMER)
 
