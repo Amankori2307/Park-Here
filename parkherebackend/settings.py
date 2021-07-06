@@ -77,6 +77,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'parkherebackend.wsgi.application'
+ASGI_APPLICATION = 'parkherebackend.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('34.131.176.203', 6379)],
+        },
+    },
+}
+
 
 
 # Database
