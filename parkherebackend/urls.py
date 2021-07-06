@@ -22,4 +22,5 @@ urlpatterns = [
     path('', include('parkinglot.urls')),
     path('', include('customer.urls')),
     path('api/login/', LoginView.as_view()),
+    path('chat/', include('chat.urls')),
 ]
