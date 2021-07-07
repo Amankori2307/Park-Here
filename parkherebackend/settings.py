@@ -76,8 +76,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'parkherebackend.wsgi.application'
 ASGI_APPLICATION = 'parkherebackend.asgi.application'
+WSGI_APPLICATION = 'parkherebackend.wsgi.application'
+
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
