@@ -107,3 +107,14 @@ DAPHNE SERVICE
 
 COMMAND TO RUN SERVER USING UWSGI
     sudo uwsgi --ini parkherebackend_uwsgi.ini
+
+
+sudo rm /etc/nginx/sites-enabled/quickse
+sudo ln -s /etc/nginx/sites-available/quickse /etc/nginx/sites-enabled
+
+SUB DOMAIN RELATED ISSUE
+    - Domain name redirects to ip address
+    - domain name redirecting, but changes to IP address\
+    - Domain Name Changes To IP Address
+    https://stackoverflow.com/questions/38471517/domain-name-changes-to-ip-address
+    Says we have to change this in godaddy itself

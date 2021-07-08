@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_yasg',
     'rest_framework.authtoken',
     'corsheaders',
     'parkinglot.apps.ParkinglotConfig',
@@ -78,6 +79,18 @@ TEMPLATES = [
 
 ASGI_APPLICATION = 'parkherebackend.asgi.application'
 WSGI_APPLICATION = 'parkherebackend.wsgi.application'
+
+# Swagger Settings
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'Token Based Authentication': {
+                'type': 'apiKey',
+                'name': 'Token <token>',
+                'in': 'header',
+        }
+    }
+}
 
 
 CHANNEL_LAYERS = {
