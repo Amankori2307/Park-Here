@@ -1,13 +1,17 @@
 from rest_framework.permissions import BasePermission
 from parkinglot.models import Charges, UserTypeChoices
 
-class VehiclePermissions(BasePermission):
+
+class IsParkingLot(BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        if request.method == "GET":
+        return user.is_authenticated and (user.user_type == UserTypeChoices.PARKING_LOT)
+
+class VehicleListPermissions(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if request.method in ["GET", "POST"]:
             return user.is_authenticated and user.user_type == UserTypeChoices.CUSTOMER
-        if request.method == "POST":
-            return True
 
 class ChargesListPermissions(BasePermission):
     def has_permission(self, request, view):
@@ -32,5 +36,14 @@ class ChargesDetailPermissions(BasePermission):
             except Charges.DoesNotExist:
                 return False
 
+        else:
+            return False
+
+
+class ParkingListPermissions(BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        if request.method == "POST":
+            return user.is_authenticated and (user.user_type == UserTypeChoices.PARKING_LOT)
         else:
             return False

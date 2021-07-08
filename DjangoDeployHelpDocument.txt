@@ -1,0 +1,120 @@
+SERVER IP
+    34.131.176.203
+
+REFERENCE
+    https://linuxize.com/post/how-to-add-user-to-sudoers-in-ubuntu/
+    https://www.codewithharry.com/blogpost/django-deploy-nginx-gunicorn
+
+    https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu-16-04
+    https://github.com/mitchtabian/HOWTO-django-channels-daphne#Install-and-Setup-Redis
+
+    https://ritiktaneja.medium.com/configuring-asgi-django-application-using-daphne-and-nginx-server-59a90456fe17
+
+
+
+
+IMPORT COMMANDS
+    sudo systemctl stop/start/restart <service-name>
+    sudo systemctl daemon-reload
+    sudo journalctl -u <server-name>
+    sudo ln -s <filpath> <folderpath>
+        - folderpath: where symlink needs to be created
+
+
+IMPORTANT FOLDERS
+    /etc/systemd/system  #All the services are headers 
+    /etc/nginx/sites-available   
+    /etc/nginx/sites-enabled
+
+COMMANDS USED
+    sudo vim /etc/nginx/sites-available/parkherebackend
+    sudo rm /etc/nginx/sites-enabled/parkherebackend
+    sudo ln -s /etc/nginx/sites-available/parkherebackend /etc/nginx/sites-enabled
+    sudo systemctl restart nginx
+    sudo rm /etc/nginx/sites-enabled/parkherebackend
+    sudo ln -s /etc/nginx/sites-available/parkherebackend /etc/nginx/sites-enabled
+    sudo systemctl restart nginx
+    sudo rm /etc/nginx/sites-enabled/parkherebackend
+    sudo ln -s /etc/nginx/sites-available/parkherebackend /etc/nginx/sites-enabled
+    sudo systemctl restart nginx
+
+
+NGINX PRXOY FILE
+    upstream channels-backend{
+            server localhost:9001;
+    }
+
+    server {
+            listen 80;
+            server_name 34.131.176.203;
+
+            access_log /home/amankori2307/nginx/parkhere/access.log;
+            error_log /home/amankori2307/nginx/parkhere/error.log;
+            location = /favicon.ico { access_log off; log_not_found off; }
+            location /static/ {
+                    root /home/amankori2307/parkherebackend;
+            }
+
+            location / {
+                    include proxy_params;
+                    proxy_pass http://unix:/home/amankori2307/parkherebackend/parkherebackend.sock;
+            }
+
+            location /ws/ {
+                    proxy_pass http://channels-backend;
+
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection "upgrade";
+                    proxy_redirect off;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Host $server_name;
+            }
+    }
+
+
+GUNICORN SERVICE
+    [Unit]
+    Description=gunicorn daemon
+    After=network.target
+
+    [Service]
+    User=amankori2307
+    Group=www-data
+    WorkingDirectory=/home/amankori2307/parkherebackend
+    ExecStart=/home/amankori2307/parkherebackend/env/bin/gunicorn --access-logfile /home/amankori2307/gunicorn/parkhere/access.log --error-logfile /home/amankori2307/gunicorn/parkhere/error.log --workers 3 --bind unix:/home/amankori2307/parkherebackend/parkherebackend.sock parkherebackend.wsgi:application
+
+    [Install]
+    WantedBy=multi-user.target
+
+
+
+DAPHNE SERVICE
+    [Unit]
+    Description=Websocket Daphne Service
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=amankori2307
+    WorkingDirectory=/home/amankori2307/parkherebackend
+    ExecStart=/home/amankori2307/parkherebackend/env/bin/python /home/amankori2307/parkherebackend/env/bin/daphne  -p 9001  parkherebackend.asgi:application
+
+    [Install]
+    WantedBy=multi-user.target
+
+COMMAND TO RUN SERVER USING UWSGI
+    sudo uwsgi --ini parkherebackend_uwsgi.ini
+
+
+sudo rm /etc/nginx/sites-enabled/quickse
+sudo ln -s /etc/nginx/sites-available/quickse /etc/nginx/sites-enabled
+
+SUB DOMAIN RELATED ISSUE
+    - Domain name redirects to ip address
+    - domain name redirecting, but changes to IP address\
+    - Domain Name Changes To IP Address
+    https://stackoverflow.com/questions/38471517/domain-name-changes-to-ip-address
+    Says we have to change this in godaddy itself

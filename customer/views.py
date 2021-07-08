@@ -4,10 +4,11 @@ from parkinglot.models import User, UserTypeChoices
 from utils.utils import check_required_fields, gen_response
 from .serializers import CustomerSerializer, CustomerListSerializer, VehicleSerializer, VehicleListSerializer
 from .models import Customer, Vehicle
-from utils.permissions import VehiclePermissions
+from utils.permissions import VehicleListPermissions
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+from django.http import Http404
 # Create your views here.
 class CustomerListView(views.APIView):
  
@@ -23,6 +24,11 @@ class CustomerListView(views.APIView):
         password = req_data.get("password", None)
         try:
             user = User.objects.get(mobile=mobile)
+            if user.user_type != UserTypeChoices.CUSTOMER:
+                return Response(
+                    gen_response(True, False, "User Already Exists"),
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except User.DoesNotExist:
             user = User.objects.create_user(mobile=mobile, password=password, user_type=UserTypeChoices.CUSTOMER)
 
@@ -63,7 +69,7 @@ class CustomerDetailView(views.APIView):
         try:
             obj = Customer.objects.get(pk=pk)
             return obj
-        except ParkingLot.DoesNotExist:
+        except Customer.DoesNotExist:
             raise Http404
     
     def get(self, requset, pk):
@@ -97,7 +103,6 @@ class CustomerDetailView(views.APIView):
                     gen_response(True, False, serializer.errors)
                 )
         except Exception as e:
-            print(e)
             return Response(
                 gen_response(True, False, "Object Not Found"),
                 status=status.HTTP_404_NOT_FOUND
@@ -123,15 +128,17 @@ class GetSelfDetails(views.APIView):
 
 # Vehicle Views
 class VehicleListView(views.APIView):
-    permission_classes = [VehiclePermissions]
+    permission_classes = [VehicleListPermissions]
     authentication_classes = [TokenAuthentication]
     def post(self, request):
-
-        serializer = VehicleSerializer(data=request.data)
+        req_data = request.data
+        req_data["customer_ref"] = request.user.id
+        serializer = VehicleSerializer(data=req_data)
         if serializer.is_valid():
             serializer.save()
+            data = VehicleListSerializer(serializer.instance).data
             return Response(
-                gen_response(False, True, "Successfully Added Vehicle"),
+                gen_response(False, True, "Successfully Added Vehicle", data),
                 status=status.HTTP_200_OK
             )
         else:
@@ -162,7 +169,7 @@ class VehicleDetailView(views.APIView):
         try:
             obj = Vehicle.objects.get(pk=pk, *args)
             return obj
-        except ParkingLot.DoesNotExist:
+        except Vehicle.DoesNotExist:
             raise Http404
     
     def get(self, requset, pk):
